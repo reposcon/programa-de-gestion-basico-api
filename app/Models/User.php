@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Model
+class User extends Authenticatable
 {
     protected $primaryKey = 'id_user';
 
@@ -18,4 +18,10 @@ class User extends Model
     protected $hidden = [
         'password_user',
     ];
+
+    // Sobrescribir método para que Laravel use password_user como contraseña
+    public function getAuthPassword()
+    {
+        return $this->password_user;
+    }
 }

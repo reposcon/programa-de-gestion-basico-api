@@ -9,18 +9,23 @@ class ProductController extends Controller
 {
     public function index()
     {
-        return Product::where('state_product', true)->get();
+        return Product::all();
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre_product' => 'required|string',
-            'category_id' => 'required|exists:categories,id_category',
-            'subcategory_id' => 'required|exists:subcategories,id_subcategory',
+            'nombre_product'   => 'required|string',
+            'category_id'      => 'required|exists:categories,id_category',
+            'subcategory_id'   => 'required|exists:subcategories,id_subcategory',
+            'state_product'    => 'nullable|integer|in:0,1' // Nuevo campo
         ]);
-        $validated['state_product'] = true; // Por defecto, el producto está activo
+
+        // Si no viene el estado, por defecto será activo
+        $validated['state_product'] = $validated['state_product'] ?? 1;
+
         $product = Product::create($validated);
+
         return response()->json($product, 201);
     }
 
@@ -33,14 +38,25 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        $product->update($request->all());
+
+        $validated = $request->validate([
+            'nombre_product'   => 'sometimes|string',
+            'category_id'      => 'sometimes|exists:categories,id_category',
+            'subcategory_id'   => 'sometimes|exists:subcategories,id_subcategory',
+            'state_product'    => 'nullable|integer|in:0,1' // Validar estado
+        ]);
+
+        $product->update($validated);
+
         return response()->json($product);
     }
 
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
-        $product->state_product = false; // Borrado lógico
+
+        // Borrado lógico: poner estado en 0 (inactivo)
+        $product->state_product = 0;
         $product->save();
 
         return response()->json(['message' => 'Producto desactivado correctamente']);

@@ -6,6 +6,10 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\SubcategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\AuthController;
+
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::middleware('web')->post('/logout', [AuthController::class, 'logout']);
 
 Route::prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);         // Obtener todos los usuarios

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Subcategory;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
@@ -29,12 +30,20 @@ class CategoryController extends Controller
         return response()->json($category);
     }
 
-    public function update(Request $request, $id)
-    {
-        $category = Category::findOrFail($id);
-        $category->update($request->all());
-        return response()->json($category);
+   public function update(Request $request, $id)
+{
+    $category = Category::findOrFail($id);
+    $category->update($request->all());
+
+    if ($request->has('state_category') && $request->state_category == 0) {
+        \App\Models\Subcategory::where('category_id', $category->id_category)
+            ->update(['state_subcategory' => 0]);
+        \App\Models\Product::where('category_id', $category->id_category)
+            ->update(['state_product' => 0]);
     }
+
+    return response()->json(['message' => 'Categoría actualizada correctamente']);
+}
 
     public function destroy($id)
     {
