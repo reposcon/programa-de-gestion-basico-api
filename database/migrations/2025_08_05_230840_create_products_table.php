@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id('id_product');
             $table->string('nombre_product');
+            $table->boolean('state_product')->default(true);
             $table->unsignedBigInteger('category_id');
             $table->unsignedBigInteger('subcategory_id');
             $table->foreign('category_id')->references('id_category')->on('categories')->onDelete('cascade');

@@ -11,7 +11,7 @@ class UserController extends Controller
     public function index()
     {
      
-        return User::all(); // Deja esto si quieres ver todos (activos e inactivos)
+        return User::all();
     }
 
     public function store(Request $request)
