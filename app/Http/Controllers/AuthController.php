@@ -16,34 +16,41 @@ class AuthController extends Controller
             'password_user' => 'required|string'
         ]);
 
-        $credentials = [
-            'name_user' => $request->name_user, // debe coincidir con nombre columna en la BD
-            'password' => $request->password_user,  // la clave siempre debe llamarse 'password'
-        ];
+        $user = User::with('role')->where('name_user', $request->name_user)->first();
 
-        if (!Auth::attempt($credentials)) {
+        if (!$user || !Hash::check($request->password_user, $user->password_user)) {
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
-        $user = Auth::user();
-
-        if ($user->state === 0) {
-            Auth::logout();
-            return response()->json(['message' => 'Usuario inactivo'], 403);
+        if ($user->state === 0 || !$user->role || $user->role->state_role === 0) {
+            $why = $user->state === 0 ? 'Usuario inactivo' : 'El rol asignado está desactivado';
+            return response()->json([
+                'message' => 'Acceso denegado: ' . $why
+            ], 403);
         }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
-            'user' => $user
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id_user' => $user->id_user,
+                'name_user' => $user->name_user,
+                'name_role' => $user->role->name_role,
+                'id_role' => $user->role->id_role,
+                'state_user' => $user->state_user
+            ]
         ]);
     }
 
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Sesión cerrada']);
+        return response()->json([
+            'message' => 'Sesión cerrada y token revocado'
+        ]);
     }
 }
