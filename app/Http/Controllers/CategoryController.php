@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Subcategory;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
@@ -30,27 +32,49 @@ class CategoryController extends Controller
         return response()->json($category);
     }
 
-   public function update(Request $request, $id)
-{
-    $category = Category::findOrFail($id);
-    $category->update($request->all());
+    public function update(Request $request, $id)
+    {
+        DB::transaction(function () use ($request, $id) {
 
-    if ($request->has('state_category') && $request->state_category == 0) {
-        \App\Models\Subcategory::where('category_id', $category->id_category)
-            ->update(['state_subcategory' => 0]);
-        \App\Models\Product::where('category_id', $category->id_category)
-            ->update(['state_product' => 0]);
+            $category = Category::findOrFail($id);
+
+            $oldState = $category->state_category;
+
+            $category->update($request->all());
+
+            if (
+                $request->has('state_category') &&
+                $oldState != $request->state_category
+            ) {
+                Subcategory::where('category_id', $id)
+                    ->update(['state_subcategory' => $request->state_category]);
+
+                Product::where('category_id', $id)
+                    ->update(['state_product' => $request->state_category]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Categoría actualizada correctamente'
+        ]);
     }
 
-    return response()->json(['message' => 'Categoría actualizada correctamente']);
-}
-
-    public function destroy($id)
+    public function toggle($id)
     {
-        $category = Category::findOrFail($id);
-        $category->state_category = false;
-        $category->save();
+        DB::transaction(function () use ($id) {
 
-        return response()->json(['message' => 'Categoría desactivada']);
+            $category = Category::findOrFail($id);
+            $newState = $category->state_category ? 0 : 1;
+
+            $category->update(['state_category' => $newState]);
+
+            Subcategory::where('category_id', $id)
+                ->update(['state_subcategory' => $newState]);
+
+            Product::where('category_id', $id)
+                ->update(['state_product' => $newState]);
+        });
+
+        return response()->json(['message' => 'Estado actualizado']);
     }
 }
