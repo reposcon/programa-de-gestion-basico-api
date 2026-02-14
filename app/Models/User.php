@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Laravel\Sanctum\HasApiTokens; 
-use Illuminate\Notifications\Notifiable; 
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -15,17 +15,31 @@ class User extends Authenticatable
     protected $fillable = [
         'name_user',
         'password_user',
-        'role_id',
         'state_user',
+        // No incluyas id_role aquí si usas la tabla intermedia
     ];
 
     protected $hidden = [
         'password_user',
     ];
 
-    public function role()
+    public function roles()
     {
-        return $this->belongsTo(Role::class, 'role_id', 'id_role');
+        return $this->belongsToMany(
+            Role::class,
+            'role_user', // Tu tabla intermedia
+            'id_user',   // FK en role_user que apunta a users
+            'id_role'    // FK en role_user que apunta a roles
+        );
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return $this->roles()
+            ->whereHas('permissions', function ($q) use ($permission) {
+                $q->where('name_permission', $permission);
+            })
+            ->exists();
     }
 
     public function getAuthPassword()

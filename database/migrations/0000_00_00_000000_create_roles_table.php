@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id('id_role'); 
             $table->string('name_role'); 
             $table->string('state_role')->default(true); 
-            $table->timestamps();
+            $table  ->timestamps();
         });
     }
 

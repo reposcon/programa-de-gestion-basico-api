@@ -4,9 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view_roles', only: ['index']),
+            new Middleware('permission:create_roles', only: ['store']),
+            new Middleware('permission:update_roles', only: ['update']),
+            new Middleware('permission:delete_roles', only: ['destroy']),
+        ];
+    }
     public function index()
     {
         return response()->json(Role::all());
@@ -20,7 +32,7 @@ class RoleController extends Controller
 
         $role = Role::create([
             'name_role' => $request->name_role,
-            'state_role' => 1 
+            'state_role' => 1
         ]);
 
         return response()->json(['message' => 'Rol creado con éxito', 'role' => $role], 201);
@@ -46,7 +58,7 @@ class RoleController extends Controller
     public function destroy($id)
     {
         $role = Role::findOrFail($id);
-        
+
         $role->state_role = 0;
         $role->save();
 
