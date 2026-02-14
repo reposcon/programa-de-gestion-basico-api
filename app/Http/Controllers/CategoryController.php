@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
-// DEBES AGREGAR "implements HasMiddleware"
 class CategoryController extends Controller implements HasMiddleware
 {
 
@@ -68,8 +67,11 @@ class CategoryController extends Controller implements HasMiddleware
             $category = Category::findOrFail($id);
             $newState = $category->state_category ? 0 : 1;
             $category->update(['state_category' => $newState]);
-            Subcategory::where('category_id', $id)->update(['state_subcategory' => $newState]);
-            Product::where('category_id', $id)->update(['state_product' => $newState]);
+
+            if ($newState == 0) { 
+                Subcategory::where('category_id', $id)->update(['state_subcategory' => 0]);
+                Product::where('category_id', $id)->update(['state_product' => 0]);
+            }
         });
 
         return response()->json(['message' => 'Estado actualizado']);

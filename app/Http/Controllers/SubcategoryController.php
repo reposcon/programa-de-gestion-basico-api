@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Subcategory;
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -12,14 +13,14 @@ use Illuminate\Routing\Controllers\Middleware;
 class SubcategoryController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
-{
-    return [
-        new Middleware('permission:view_subcategories', only: ['index', 'show']),
-        new Middleware('permission:create_subcategories', only: ['store']),
-        new Middleware('permission:update_subcategories', only: ['update', 'toggle']),
-        new Middleware('permission:delete_subcategories', only: ['destroy']),
-    ];
-}
+    {
+        return [
+            new Middleware('permission:view_subcategories', only: ['index', 'show']),
+            new Middleware('permission:create_subcategories', only: ['store']),
+            new Middleware('permission:update_subcategories', only: ['update', 'toggle']),
+            new Middleware('permission:delete_subcategories', only: ['destroy']),
+        ];
+    }
     public function index()
     {
         return Subcategory::with('category')->withCount('products')->get();
@@ -32,7 +33,7 @@ class SubcategoryController extends Controller implements HasMiddleware
             'state_subcategory' => 'required|boolean',
             'category_id' => 'required|exists:categories,id_category',
         ]);
-        
+
         $subcategory = Subcategory::create($validated);
         return response()->json($subcategory, 201);
     }
@@ -51,7 +52,6 @@ class SubcategoryController extends Controller implements HasMiddleware
 
             $subcategory->update($request->all());
 
-            // Si el estado cambia, se propaga a los productos hijos
             if (
                 $request->has('state_subcategory') &&
                 $oldState != $request->state_subcategory
@@ -72,10 +72,20 @@ class SubcategoryController extends Controller implements HasMiddleware
             $sub = Subcategory::findOrFail($id);
             $newState = $sub->state_subcategory ? 0 : 1;
 
-            $sub->update(['state_subcategory' => $newState]);
+            if ($newState == 1) {
+                $categoryActive = Category::where('id_category', $sub->category_id)
+                    ->where('state_category', 1)
+                    ->exists();
 
-            Product::where('subcategory_id', $id)
-                ->update(['state_product' => $newState]);
+                if (!$categoryActive) {
+                    throw new \Exception('No se puede activar la subcategoría porque la categoría asociada está inactiva');
+                }
+            }
+            $sub->update(['state_subcategory' => $newState]);
+            if ($newState == 0) {
+                Product::where('subcategory_id', $id)
+                    ->update(['state_product' => 0]);
+            }
         });
 
         return response()->json(['message' => 'Estado actualizado']);

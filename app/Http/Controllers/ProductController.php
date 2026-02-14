@@ -62,22 +62,10 @@ class ProductController extends Controller implements HasMiddleware
 
         return response()->json(['message' => 'Producto actualizado correctamente']);
     }
-
-    public function destroy($id)
-    {
-        $product = Product::findOrFail($id);
-
-        $product->state_product = 0;
-        $product->save();
-
-        return response()->json(['message' => 'Producto desactivado correctamente']);
-    }
-
     public function toggle($id)
     {
         $product = Product::findOrFail($id);
 
-        // Si se intenta activar (pasar de 0 a 1), validamos padres
         if ($product->state_product == 0) {
             $categoryActive = Category::where('id_category', $product->category_id)
                 ->where('state_category', 1)
@@ -100,4 +88,16 @@ class ProductController extends Controller implements HasMiddleware
 
         return response()->json(['message' => 'Estado del producto actualizado']);
     }
+
+    
+    public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+
+        $product->state_product = 0;
+        $product->save();
+
+        return response()->json(['message' => 'Producto desactivado correctamente']);
+    }
+
 }
