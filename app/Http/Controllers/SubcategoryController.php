@@ -3,134 +3,90 @@
 namespace App\Http\Controllers;
 
 use App\Models\Subcategory;
-use App\Models\Product;
 use App\Models\Category;
-use Illuminate\Support\Facades\DB;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Auth;
 
 class SubcategoryController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_subcategories', only: ['index', 'show']),
+            new Middleware('permission:view_subcategories', only: ['index']),
             new Middleware('permission:create_subcategories', only: ['store']),
             new Middleware('permission:update_subcategories', only: ['update', 'toggle']),
             new Middleware('permission:delete_subcategories', only: ['destroy']),
         ];
     }
 
-    /* =========================
-       LISTAR
-    ==========================*/
     public function index()
     {
-        return Subcategory::with('category')
-            ->withCount('products')
-            ->get();
+        return Subcategory::with('category')->get();
     }
 
-    /* =========================
-       CREAR
-    ==========================*/
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name_subcategory'  => 'required|string',
-            'state_subcategory' => 'required|boolean',
-            'category_id'       => 'required|exists:categories,id_category',
+            'name_subcategory' => 'required',
+            'category_id' => 'required|exists:categories,id_category'
         ]);
-
-        $validated['created_by'] = Auth::user()->id_user;
-
+        $validated['created_by'] = Auth::id();
         $subcategory = Subcategory::create($validated);
-
         return response()->json($subcategory, 201);
     }
 
-    /* =========================
-       MOSTRAR
-    ==========================*/
-    public function show($id)
-    {
-        return Subcategory::with('category')->findOrFail($id);
-    }
-
-    /* =========================
-       ACTUALIZAR
-    ==========================*/
     public function update(Request $request, $id)
     {
-        DB::transaction(function () use ($request, $id) {
+        $subcategory = Subcategory::findOrFail($id);
 
-            $subcategory = Subcategory::findOrFail($id);
-            $oldState = $subcategory->state_subcategory;
-
-            $data = $request->all();
-            $data['updated_by'] = Auth::user()->id_user;
-
-            $subcategory->update($data);
-
-            if (
-                $request->has('state_subcategory') &&
-                $oldState != $request->state_subcategory
-            ) {
-                Product::where('subcategory_id', $id)
-                    ->update([
-                        'state_product' => $request->state_subcategory,
-                        'updated_by'    => Auth::user()->id_user,
-                    ]);
-            }
-        });
-
-        return response()->json([
-            'message' => 'Subcategoría actualizada correctamente'
+        $validated = $request->validate([
+            'name_subcategory' => 'required|string|max:255',
+            'category_id'      => 'required|exists:categories,id_category',
+            'state_subcategory' => 'nullable|boolean'
         ]);
+
+        $subcategory->update([
+            'name_subcategory'  => $validated['name_subcategory'],
+            'category_id'       => $validated['category_id'],
+            'state_subcategory' => $request->has('state_subcategory') ? $validated['state_subcategory'] : $subcategory->state_subcategory,
+            'updated_by'        => Auth::id()
+        ]);
+
+        return response()->json(['message' => 'Subcategoría actualizada', 'subcategory' => $subcategory]);
     }
 
-    /* =========================
-       TOGGLE
-    ==========================*/
     public function toggle($id)
     {
-        DB::transaction(function () use ($id) {
-
+        return DB::transaction(function () use ($id) {
             $sub = Subcategory::findOrFail($id);
+            $userId = Auth::id();
             $newState = $sub->state_subcategory ? 0 : 1;
 
             if ($newState === 1) {
-                $categoryActive = Category::where('id_category', $sub->category_id)
-                    ->where('state_category', 1)
-                    ->exists();
-
-                if (!$categoryActive) {
-                    throw new \Exception(
-                        'No se puede activar la subcategoría porque la categoría está inactiva'
-                    );
-                }
+                $parent = Category::where('id_category', $sub->category_id)->where('state_category', 1)->exists();
+                if (!$parent) return response()->json(['message' => 'Categoría padre inactiva'], 422);
             }
 
             $sub->update([
                 'state_subcategory' => $newState,
-                'updated_by'        => Auth::user()->id_user,
-                'deleted_by'        => $newState === 0 ? Auth::user()->id_user : null,
+                'updated_by' => $userId,
+                'deleted_by' => $newState ? null : $userId
             ]);
 
-            if ($newState === 0) {
-                Product::where('subcategory_id', $id)
-                    ->update([
-                        'state_product' => 0,
-                        'updated_by'    => Auth::user()->id_user,
-                        'deleted_by'    => Auth::user()->id_user,
-                    ]);
+            if (!$newState) {
+                Product::where('subcategory_id', $id)->update(['state_product' => 0, 'updated_by' => $userId, 'deleted_by' => $userId]);
             }
+            return response()->json(['message' => 'Subcategoría actualizada']);
         });
+    }
 
-        return response()->json([
-            'message' => 'Estado actualizado'
-        ]);
+    public function destroy($id)
+    {
+        Subcategory::findOrFail($id)->delete();
+        return response()->json(['message' => 'Borrado físico']);
     }
 }

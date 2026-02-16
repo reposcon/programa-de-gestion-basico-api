@@ -8,18 +8,17 @@ class Role extends Model
 {
     protected $primaryKey = 'id_role';
 
-    protected $fillable = [
-        'name_role',
-        'state_role',
-    ];
-
+    protected $fillable = ['name_role', 'state_role', 'created_by', 'updated_by', 'deleted_by'];
     public function users()
     {
         return $this->belongsToMany(
             User::class,
             'role_user',
             'id_role',
-            'id_user'
+            'id_user',
+            'created_by',
+            'updated_by',
+            'deleted_by'
         );
     }
 

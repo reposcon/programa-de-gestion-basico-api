@@ -11,6 +11,12 @@ return new class extends Migration {
         Schema::create('permissions', function (Blueprint $table) {
             $table->id('id_permission');
             $table->string('name_permission')->unique();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('deleted_by')->nullable();
+            $table->foreign('created_by')->references('id_user')->on('users');
+            $table->foreign('updated_by')->references('id_user')->on('users');
+            $table->foreign('deleted_by')->references('id_user')->on('users');
             $table->timestamps();
         });
     }

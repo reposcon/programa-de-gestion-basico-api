@@ -6,140 +6,120 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_users',   only: ['index']),
+            new Middleware('permission:view_users', only: ['index']),
             new Middleware('permission:create_users', only: ['store']),
             new Middleware('permission:update_users', only: ['update', 'toggle']),
             new Middleware('permission:delete_users', only: ['destroy']),
         ];
     }
 
-    /* =======================
-        LISTAR
-    ======================= */
     public function index()
     {
-        return User::with(['roles'])->get()->map(function ($user) {
+        return User::with('roles')->get()->map(function ($user) {
             $user->role = $user->roles->first();
             return $user;
         });
     }
 
-    /* =======================
-        CREAR
-    ======================= */
     public function store(Request $request)
     {
-        $request->validate([
-            'name_user'     => 'required|unique:users,name_user',
+        $validated = $request->validate([
+            'name_user' => 'required|unique:users,name_user',
             'password_user' => 'required|min:6',
-            'id_role'       => 'required|exists:roles,id_role'
+            'id_role' => 'required|exists:roles,id_role'
         ]);
 
-        $role = Role::find($request->id_role);
-        if ($role->state_role == 0) {
-            return response()->json([
-                'message' => 'No puedes asignar un rol inactivo'
-            ], 422);
-        }
+        return DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name_user' => $validated['name_user'],
+                'password_user' => Hash::make($validated['password_user']),
+                'state_user' => 1,
+                'created_by' => Auth::id()
+            ]);
 
-        $user = User::create([
-            'name_user'     => $request->name_user,
-            'password_user' => Hash::make($request->password_user),
-            'state_user'    => 1,
-            'created_by'    => Auth::user()->id_user,
-        ]);
-
-        $user->roles()->attach($request->id_role);
-
-        return response()->json([
-            'message' => 'Usuario creado correctamente',
-            'user' => $user->load('roles')
-        ], 201);
+            $user->roles()->attach($validated['id_role']);
+            return response()->json(['message' => 'Usuario creado', 'user' => $user], 201);
+        });
     }
 
-    /* =======================
-        ACTUALIZAR
-    ======================= */
-    public function update(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
+public function update(Request $request, $id)
+{
+    $user = User::findOrFail($id);
 
-        $request->validate([
-            'name_user'     => "sometimes|unique:users,name_user,{$id},id_user",
-            'id_role'       => 'sometimes|exists:roles,id_role',
-            'state_user'    => 'sometimes|in:0,1',
-            'password_user' => 'nullable|min:6'
-        ]);
+    $validated = $request->validate([
+        'name_user'     => "required|string|max:255|unique:users,name_user,{$id},id_user",
+        'password_user' => 'nullable|min:6', 
+        'id_role'       => 'required|exists:roles,id_role',
+        'state_user'    => 'nullable|boolean'
+    ]);
 
-        if ($request->has('name_user')) {
-            $user->name_user = $request->name_user;
-        }
+    $userData = [
+        'name_user'  => $validated['name_user'],
+        'updated_by' => Auth::id(), 
+    ];
 
-        if ($request->has('state_user')) {
-            $user->state_user = $request->state_user;
-        }
-
-        if ($request->filled('password_user')) {
-            $user->password_user = Hash::make($request->password_user);
-        }
-
-        $user->updated_by = Auth::user()->id_user;
-        $user->save();
-
-        if ($request->has('id_role')) {
-            $user->roles()->sync([$request->id_role]);
-        }
-
-        $user->load('roles');
-        $user->role = $user->roles->first();
-
-        return response()->json([
-            'message' => 'Usuario actualizado correctamente',
-            'user' => $user
-        ]);
+    if ($request->filled('password_user')) {
+        $userData['password_user'] = Hash::make($validated['password_user']);
     }
 
-    /* =======================
-        ACTIVAR / DESACTIVAR
-    ======================= */
+    if ($request->has('state_user')) {
+        $userData['state_user'] = $validated['state_user'];
+        if ($validated['state_user'] == 0) {
+            $userData['deleted_by'] = Auth::id();
+        } else {
+            $userData['deleted_by'] = null;
+        }
+    }
+
+    DB::transaction(function () use ($user, $userData, $validated) {
+        $user->update($userData);
+        
+        $user->roles()->sync([$validated['id_role']]);
+    });
+
+    return response()->json([
+        'message' => 'Usuario y roles actualizados correctamente',
+        'user' => $user->load('roles')
+    ]);
+}
+
     public function toggle($id)
     {
         $user = User::findOrFail($id);
+        $userId = Auth::id();
 
+        if ($user->id_user === $userId) {
+            return response()->json(['message' => 'No puedes desactivarte a ti mismo'], 403);
+        }
+
+        $newState = $user->state_user ? 0 : 1;
         $user->update([
-            'state_user' => !$user->state_user,
-            'updated_by' => Auth::user()->id_user,
-            'deleted_by' => $user->state_user ? Auth::user()->id_user : null
+            'state_user' => $newState,
+            'updated_by' => $userId,
+            'deleted_by' => $newState ? null : $userId
         ]);
 
-        return response()->json([
-            'message' => 'Estado del usuario actualizado'
-        ]);
+        return response()->json(['message' => 'Estado actualizado']);
     }
 
-    /* =======================
-        DESACTIVAR 
-    ======================= */
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-
-        $user->update([
-            'state_user' => 0,
-            'deleted_by' => Auth::user()->id_user
-        ]);
-
-        return response()->json([
-            'message' => 'Usuario desactivado correctamente'
-        ]);
+        if ($user->id_user === Auth::id()) {
+            return response()->json(['message' => 'No puedes eliminarte a ti mismo'], 403);
+        }
+        $user->roles()->detach();
+        $user->delete(); // Borrado físico real
+        return response()->json(['message' => 'Usuario eliminado permanentemente']);
     }
 }

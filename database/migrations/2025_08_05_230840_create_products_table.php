@@ -13,23 +13,27 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id('id_product');
-            
+
             $table->string('name_product');
- 
+
             $table->boolean('state_product')->default(true);
 
             $table->unsignedBigInteger('category_id');
             $table->unsignedBigInteger('subcategory_id');
 
             $table->foreign('category_id')
-                  ->references('id_category')
-                  ->on('categories')
-                  ->onDelete('cascade');
+                ->references('id_category')
+                ->on('categories')
+                ->onDelete('cascade');
 
             $table->foreign('subcategory_id')
-                  ->references('id_subcategory')
-                  ->on('subcategories')
-                  ->onDelete('cascade');
+                ->references('id_subcategory')
+                ->on('subcategories')
+                ->onDelete('cascade');
+
+            // $table->foreign('created_by')->references('id_user')->on('users');
+            // $table->foreign('updated_by')->references('id_user')->on('users');
+            // $table->foreign('deleted_by')->references('id_user')->on('users');
 
             $table->timestamps();
         });

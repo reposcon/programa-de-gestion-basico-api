@@ -19,6 +19,9 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->unsignedBigInteger('deleted_by')->nullable();
+            $table->foreign('created_by')->references('id_user')->on('users');
+            $table->foreign('updated_by')->references('id_user')->on('users');
+            $table->foreign('deleted_by')->references('id_user')->on('users');
             $table->foreign('category_id')->references('id_category')->on('categories')->onDelete('cascade');
             $table->timestamps();
         });

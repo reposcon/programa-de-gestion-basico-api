@@ -7,149 +7,78 @@ use App\Models\Subcategory;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Auth;
 
 class CategoryController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_categories',   only: ['index', 'show']),
+            new Middleware('permission:view_categories', only: ['index']),
             new Middleware('permission:create_categories', only: ['store']),
             new Middleware('permission:update_categories', only: ['update', 'toggle']),
             new Middleware('permission:delete_categories', only: ['destroy']),
         ];
     }
 
-    /* =======================
-        LISTAR
-    ======================= */
     public function index()
     {
-        return Category::all(); // incluye activas e inactivas
+        return Category::all();
     }
 
-    /* =======================
-        MOSTRAR
-    ======================= */
-    public function show($id)
-    {
-        return Category::findOrFail($id);
-    }
-
-    /* =======================
-        CREAR
-    ======================= */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name_category'  => 'required|string|max:255',
-            'state_category' => 'nullable|boolean'
-        ]);
-
-        $category = Category::create([
-            'name_category'  => $validated['name_category'],
-            'state_category' => $validated['state_category'] ?? 1,
-            'created_by'     => Auth::user()->id_user,
-        ]);
-
-        return response()->json([
-            'message'  => 'Categoría creada correctamente',
-            'category' => $category
-        ], 201);
+        $validated = $request->validate(['name_category' => 'required|unique:categories']);
+        $validated['created_by'] = Auth::id();
+        $category = Category::create($validated);
+        return response()->json($category, 201);
     }
 
-    /* =======================
-        ACTUALIZAR
-    ======================= */
+
     public function update(Request $request, $id)
-    {
-        DB::transaction(function () use ($request, $id) {
-
-            $validated = $request->validate([
-                'name_category'  => 'sometimes|string|max:255',
-                'state_category' => 'sometimes|boolean'
-            ]);
-
-            $category = Category::findOrFail($id);
-            $oldState = $category->state_category;
-
-            $category->update([
-                ...$validated,
-                'updated_by' => Auth::user()->id_user
-            ]);
-
-            // si cambia el estado → cascada
-            if (array_key_exists('state_category', $validated) && $oldState != $validated['state_category']) {
-                Subcategory::where('category_id', $id)
-                    ->update(['state_subcategory' => $validated['state_category']]);
-
-                Product::where('category_id', $id)
-                    ->update(['state_product' => $validated['state_category']]);
-            }
-        });
-
-        return response()->json([
-            'message' => 'Categoría actualizada correctamente'
-        ]);
-    }
-
-    /* =======================
-        ACTIVAR / DESACTIVAR
-    ======================= */
-    public function toggle($id)
-    {
-        DB::transaction(function () use ($id) {
-
-            $category = Category::findOrFail($id);
-            $newState = !$category->state_category;
-
-            $category->update([
-                'state_category' => $newState,
-                'updated_by'     => Auth::user()->id_user,
-                'deleted_by'     => $newState ? null : Auth::user()->id_user,
-            ]);
-
-            // si se desactiva → cascada
-            if (!$newState) {
-                Subcategory::where('category_id', $id)
-                    ->update(['state_subcategory' => 0]);
-
-                Product::where('category_id', $id)
-                    ->update(['state_product' => 0]);
-            }
-        });
-
-        return response()->json([
-            'message' => 'Estado de la categoría actualizado'
-        ]);
-    }
-
-    /* =======================
-        DESACTIVAR 
-    ======================= */
-    public function destroy($id)
     {
         $category = Category::findOrFail($id);
 
-        DB::transaction(function () use ($category) {
+        $validated = $request->validate([
+            'name_category' => "required|string|max:255|unique:categories,name_category,{$id},id_category",
+            'state_category' => 'nullable|boolean'
+        ]);
+
+        $category->update([
+            'name_category'  => $validated['name_category'],
+            'state_category' => $request->has('state_category') ? $validated['state_category'] : $category->state_category,
+            'updated_by'     => Auth::id()
+        ]);
+
+        return response()->json(['message' => 'Categoría actualizada', 'category' => $category]);
+    }
+
+    public function toggle($id)
+    {
+        return DB::transaction(function () use ($id) {
+            $category = Category::findOrFail($id);
+            $userId = Auth::id();
+            $newState = $category->state_category ? 0 : 1;
 
             $category->update([
-                'state_category' => 0,
-                'deleted_by'     => Auth::user()->id_user,
+                'state_category' => $newState,
+                'updated_by' => $userId,
+                'deleted_by' => $newState ? null : $userId,
             ]);
 
-            Subcategory::where('category_id', $category->id_category)
-                ->update(['state_subcategory' => 0]);
-
-            Product::where('category_id', $category->id_category)
-                ->update(['state_product' => 0]);
+            if (!$newState) {
+                Subcategory::where('category_id', $id)->update(['state_subcategory' => 0, 'updated_by' => $userId, 'deleted_by' => $userId]);
+                Product::where('category_id', $id)->update(['state_product' => 0, 'updated_by' => $userId, 'deleted_by' => $userId]);
+            }
+            return response()->json(['message' => 'Estado actualizado en cascada']);
         });
+    }
 
-        return response()->json([
-            'message' => 'Categoría desactivada correctamente'
-        ]);
+    public function destroy($id)
+    {
+        Category::findOrFail($id)->delete();
+        return response()->json(['message' => 'Categoría eliminada físicamente']);
     }
 }
