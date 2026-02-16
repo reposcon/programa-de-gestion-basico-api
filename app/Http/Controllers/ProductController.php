@@ -8,10 +8,10 @@ use App\Models\Subcategory;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller implements HasMiddleware
 {
-
     public static function middleware(): array
     {
         return [
@@ -22,46 +22,78 @@ class ProductController extends Controller implements HasMiddleware
         ];
     }
 
+    /* =======================
+        LISTAR
+    ======================= */
     public function index()
     {
         return Product::with(['category', 'subcategory'])->get();
     }
 
+    /* =======================
+        CREAR
+    ======================= */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name_product'   => 'required|string',
-            'category_id'      => 'required|exists:categories,id_category',
-            'subcategory_id'   => 'required|exists:subcategories,id_subcategory',
-            'state_product'    => 'nullable|integer|in:0,1'
+            'name_product'   => 'required|string|max:255',
+            'category_id'    => 'required|exists:categories,id_category',
+            'subcategory_id' => 'required|exists:subcategories,id_subcategory',
         ]);
 
-        $validated['state_product'] = $validated['state_product'] ?? 1;
+        $product = Product::create([
+            'name_product'   => $validated['name_product'],
+            'category_id'    => $validated['category_id'],
+            'subcategory_id' => $validated['subcategory_id'],
+            'state_product'  => 1,
+            'created_by'     => Auth::user()->id_user,
+        ]);
 
-        $product = Product::create($validated);
-
-        return response()->json($product, 201);
+        return response()->json([
+            'message' => 'Producto creado correctamente',
+            'product' => $product
+        ], 201);
     }
 
+    /* =======================
+        MOSTRAR
+    ======================= */
     public function show($id)
     {
-        $product = Product::with(['category', 'subcategory'])->findOrFail($id);
-        return response()->json($product);
+        return Product::with(['category', 'subcategory'])
+            ->findOrFail($id);
     }
 
+    /* =======================
+        ACTUALIZAR
+    ======================= */
     public function update(Request $request, $id)
     {
+        $validated = $request->validate([
+            'name_product'   => 'required|string|max:255',
+            'category_id'    => 'required|exists:categories,id_category',
+            'subcategory_id' => 'required|exists:subcategories,id_subcategory',
+            'state_product'  => 'required|in:0,1',
+        ]);
+
         $product = Product::findOrFail($id);
 
         $product->update([
-            'name_product' => $request->name_product,
-            'category_id' => $request->category_id,
-            'subcategory_id' => $request->subcategory_id,
-            'state_product' => $request->state_product
+            'name_product'   => $validated['name_product'],
+            'category_id'    => $validated['category_id'],
+            'subcategory_id' => $validated['subcategory_id'],
+            'state_product'  => $validated['state_product'],
+            'updated_by'     => Auth::user()->id_user,
         ]);
 
-        return response()->json(['message' => 'Producto actualizado correctamente']);
+        return response()->json([
+            'message' => 'Producto actualizado correctamente'
+        ]);
     }
+
+    /* =======================
+        ACTIVAR / DESACTIVAR
+    ======================= */
     public function toggle($id)
     {
         $product = Product::findOrFail($id);
@@ -83,21 +115,30 @@ class ProductController extends Controller implements HasMiddleware
         }
 
         $product->update([
-            'state_product' => $product->state_product ? 0 : 1
+            'state_product' => !$product->state_product,
+            'updated_by'    => Auth::user()->id_user,
+            'deleted_by'    => $product->state_product ? Auth::user()->id_user : null
         ]);
 
-        return response()->json(['message' => 'Estado del producto actualizado']);
+        return response()->json([
+            'message' => 'Estado del producto actualizado'
+        ]);
     }
 
-    
+    /* =======================
+        BORRADO LÓGICO
+    ======================= */
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
 
-        $product->state_product = 0;
-        $product->save();
+        $product->update([
+            'state_product' => 0,
+            'deleted_by'    => Auth::user()->id_user,
+        ]);
 
-        return response()->json(['message' => 'Producto desactivado correctamente']);
+        return response()->json([
+            'message' => 'Producto desactivado correctamente'
+        ]);
     }
-
 }

@@ -16,7 +16,9 @@ class User extends Authenticatable
         'name_user',
         'password_user',
         'state_user',
-        // No incluyas id_role aquí si usas la tabla intermedia
+        'created_by',
+        'updated_by',
+        'deleted_by',
     ];
 
     protected $hidden = [
@@ -27,9 +29,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(
             Role::class,
-            'role_user', // Tu tabla intermedia
-            'id_user',   // FK en role_user que apunta a users
-            'id_role'    // FK en role_user que apunta a roles
+            'role_user', 
+            'id_user',  
+            'id_role'   
         );
     }
 

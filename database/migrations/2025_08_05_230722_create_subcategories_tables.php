@@ -15,8 +15,10 @@ return new class extends Migration
             $table->id('id_subcategory');
             $table->string('name_subcategory');
             $table->boolean('state_subcategory')->default(1);
-            $table->integer('amount_products')->default(0);
             $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('deleted_by')->nullable();
             $table->foreign('category_id')->references('id_category')->on('categories')->onDelete('cascade');
             $table->timestamps();
         });
