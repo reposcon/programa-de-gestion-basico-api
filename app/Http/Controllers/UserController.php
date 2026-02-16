@@ -62,7 +62,6 @@ class UserController extends Controller implements HasMiddleware
     {
         $user = User::findOrFail($id);
 
-        // Quitamos el 'required'. Ahora solo validará si el campo está presente.
         $request->validate([
             'name_user'     => "sometimes|unique:users,name_user,{$id},id_user",
             'id_role'       => 'sometimes|exists:roles,id_role',
@@ -70,7 +69,6 @@ class UserController extends Controller implements HasMiddleware
             'password_user' => 'nullable|min:6'
         ]);
 
-        // Actualizamos solo si los campos vienen en la petición
         if ($request->has('name_user')) {
             $user->name_user = $request->name_user;
         }
@@ -78,20 +76,16 @@ class UserController extends Controller implements HasMiddleware
         if ($request->has('state_user')) {
             $user->state_user = $request->state_user;
         }
-
-        // Lógica de contraseña: solo si tiene contenido real
         if ($request->filled('password_user')) {
             $user->password_user = Hash::make($request->password_user);
         }
 
         $user->save();
 
-        // Actualizamos el rol solo si se envió id_role
         if ($request->has('id_role')) {
             $user->roles()->sync([$request->id_role]);
         }
 
-        // Devolvemos el usuario con su rol para que Angular actualice la tabla
         $user->load('roles');
         $user->role = $user->roles->first();
         $user->id_role = $user->role ? $user->role->id_role : null;
