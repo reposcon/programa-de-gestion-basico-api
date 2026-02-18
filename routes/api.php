@@ -11,6 +11,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\TaxSettingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\ReportController;
 
 
@@ -20,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('tax-settings', [TaxSettingController::class, 'index']);
+    Route::get('paymentmethods', [PaymentMethodController::class, 'index']);
     Route::get('reports/daily-closing', [ReportController::class, 'dailyClosing']);
     Route::post('products/import', [ProductController::class, 'importExcel']);
     Route::get('/products/template', [ProductController::class, 'downloadTemplate']);
