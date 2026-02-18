@@ -9,6 +9,7 @@ class PermissionSeeder extends Seeder
 {
     public function run(): void
     {
+        DB::table('permission_role')->truncate();
         $permissions = [
             'view_users',
             'create_users',
@@ -34,6 +35,22 @@ class PermissionSeeder extends Seeder
             'create_products',
             'update_products',
             'delete_products',
+
+            'view_sales',
+            'create_sales',
+
+            'view_customers',
+            'create_customers',
+            'update_customers',
+
+            'view_taxsetting',
+
+            'view_dailyClosing',
+
+            'exportExcel',
+            'importExcel',
+            'downloadInvoice'
+
         ];
 
         foreach ($permissions as $permission) {

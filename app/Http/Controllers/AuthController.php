@@ -53,7 +53,8 @@ class AuthController extends Controller implements HasMiddleware
                 'id_user' => $user->id_user,
                 'name_user' => $user->name_user,
                 'state_user' => $user->state_user,
-                'roles' => $activeRoles->pluck('name_role'),
+                'id_role' => $activeRoles->first()->id_role,
+                'name_role' => $activeRoles->first()->name_role,
                 'permissions' => $permissions
             ]
         ]);

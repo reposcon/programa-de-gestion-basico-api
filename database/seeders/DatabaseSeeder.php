@@ -14,7 +14,10 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             PermissionSeeder::class,
             RolePermissionSeeder::class,
-
+            TaxAndUvtSeeder::class,
+            ProductTestSeeder::class,
+            CustomerSeeder::class,
+            PaymentMethodSeeder::class
         ]);
     }
 }

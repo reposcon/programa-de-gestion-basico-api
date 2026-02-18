@@ -11,13 +11,24 @@ class Product extends Model
 
     protected $fillable = [
         'name_product',
+        'price_cost',    // Nuevo
+        'price_net',     // Nuevo
+        'tax_id',        // Nuevo
+        'price_sell',    // Nuevo
+        'is_tax_included', // Nuevo
+        'stock',
+        'state_product',
         'category_id',
         'subcategory_id',
-        'state_product',
         'created_by',
         'updated_by',
         'deleted_by'
     ];
+
+    public function tax()
+    {
+        return $this->belongsTo(TaxSetting::class, 'tax_id', 'id_tax');
+    }
 
     public function category()
     {

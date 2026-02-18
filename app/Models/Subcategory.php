@@ -12,11 +12,17 @@ class Subcategory extends Model
     protected $fillable = [
         'name_subcategory',
         'state_subcategory',
+        'default_tax_id',
         'category_id',
         'created_by',
         'updated_by',
         'deleted_by'
     ];
+
+    public function defaultTax()
+    {
+        return $this->belongsTo(TaxSetting::class, 'default_tax_id', 'id_tax');
+    }   
 
     public function category()
     {

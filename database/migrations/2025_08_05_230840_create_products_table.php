@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('name_product');
 
             $table->boolean('state_product')->default(true);
+            $table->integer('stock')->default(0); 
+
 
             $table->unsignedBigInteger('category_id');
             $table->unsignedBigInteger('subcategory_id');
@@ -30,10 +32,6 @@ return new class extends Migration
                 ->references('id_subcategory')
                 ->on('subcategories')
                 ->onDelete('cascade');
-
-            // $table->foreign('created_by')->references('id_user')->on('users');
-            // $table->foreign('updated_by')->references('id_user')->on('users');
-            // $table->foreign('deleted_by')->references('id_user')->on('users');
 
             $table->timestamps();
         });

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Subcategory;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Auth\Events\Validated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +33,8 @@ class SubcategoryController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'name_subcategory' => 'required',
-            'category_id' => 'required|exists:categories,id_category'
+            'category_id' => 'required|exists:categories,id_category',
+            'default_tax_id' => 'nullable|exists:tax_settings,id_tax'
         ]);
         $validated['created_by'] = Auth::id();
         $subcategory = Subcategory::create($validated);
@@ -46,13 +48,13 @@ class SubcategoryController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'name_subcategory' => 'required|string|max:255',
             'category_id'      => 'required|exists:categories,id_category',
-            'state_subcategory' => 'nullable|boolean'
+            'default_tax_id' => 'nullable|exists:tax_settings,id_tax'
         ]);
 
         $subcategory->update([
             'name_subcategory'  => $validated['name_subcategory'],
             'category_id'       => $validated['category_id'],
-            'state_subcategory' => $request->has('state_subcategory') ? $validated['state_subcategory'] : $subcategory->state_subcategory,
+            'default_tax_id' => $validated['default_tax_id'],
             'updated_by'        => Auth::id()
         ]);
 

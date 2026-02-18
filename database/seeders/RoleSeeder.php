@@ -11,5 +11,6 @@ public function run(): void
 {
     Role::create(['name_role' => 'admin']);
     Role::create(['name_role' => 'client']);
+    Role::create(['name_role' => 'seller']);
 }
 }

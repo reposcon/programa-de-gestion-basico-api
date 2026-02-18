@@ -9,20 +9,57 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminRoleId = DB::table('roles')
-            ->where('name_role', 'admin')
-            ->value('id_role');
 
-        $clientRoleId = DB::table('roles')
-            ->where('name_role', 'client')
-            ->value('id_role');
+        $adminRoleId = DB::table('roles')->updateOrInsert(
+            ['name_role' => 'admin'],
+            ['created_at' => now()]
+        );
+        $sellerRoleId = DB::table('roles')->updateOrInsert(
+            ['name_role' => 'seller'],
+            ['created_at' => now()]
+        );
+        $clientRoleId = DB::table('roles')->updateOrInsert(
+            ['name_role' => 'client'],
+            ['created_at' => now()]
+        );
 
-        $permissions = DB::table('permissions')->pluck('id_permission');
+        // Ahora los buscamos para tener el ID real
+        $adminId = DB::table('roles')->where('name_role', 'admin')->value('id_role');
+        $sellerId = DB::table('roles')->where('name_role', 'seller')->value('id_role');
+        $clientId = DB::table('roles')->where('name_role', 'client')->value('id_role');
 
-        foreach ($permissions as $permissionId) {
-            DB::table('permission_role')->insert([
-                'id_permission' => $permissionId,
-                'id_role' => $adminRoleId,
+        // 2. Asignar TODO al Admin
+        $allPermissions = DB::table('permissions')->pluck('id_permission');
+        foreach ($allPermissions as $pId) {
+            DB::table('permission_role')->updateOrInsert([
+                'id_permission' => $pId,
+                'id_role' => $adminId,
+            ]);
+        }
+
+        // 3. Asignar permisos al SELLER
+        $sellerPermissions = DB::table('permissions')
+            ->whereIn('name_permission', [
+                'view_sales',
+                'create_sales',
+
+                'view_customers',
+                'create_customers',
+                'update_customers',
+
+                'view_taxsetting',
+
+                'view_dailyClosing',
+
+                'exportExcel',
+                'importExcel',
+                'downloadInvoice'
+            ])->pluck('id_permission');
+
+        foreach ($sellerPermissions as $pId) {
+            DB::table('permission_role')->updateOrInsert([
+                'id_permission' => $pId,
+                'id_role' => $sellerId,
             ]);
         }
 
@@ -31,13 +68,12 @@ class RolePermissionSeeder extends Seeder
                 'view_products',
                 'view_categories',
                 'view_subcategories',
-            ])
-            ->pluck('id_permission');
+            ])->pluck('id_permission');
 
-        foreach ($clientPermissions as $permissionId) {
-            DB::table('permission_role')->insert([
-                'id_permission' => $permissionId,
-                'id_role' => $clientRoleId,
+        foreach ($clientPermissions as $pId) {
+            DB::table('permission_role')->updateOrInsert([
+                'id_permission' => $pId,
+                'id_role' => $clientId,
             ]);
         }
     }
