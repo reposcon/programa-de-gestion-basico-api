@@ -91,6 +91,14 @@ class SaleController extends Controller implements HasMiddleware
                 Product::where('id_product', $itemData['product_id'])->decrement('stock', $itemData['quantity']);
             }
 
+            foreach ($request->payments as $index => $pay) {
+                SalePayment::create([
+                    'sale_id'           => $sale->id_sale,
+                    'payment_method_id' => $pay['payment_method_id'],
+                    'amount_paid'       => $pay['amount'], 
+                    'change_returned'   => ($index === 0) ? ($request->payments[0]['change_returned'] ?? 0) : 0,
+                ]);
+            }
             return response()->json(['status' => 'success', 'id_sale' => $sale->id_sale], 201);
         });
     }

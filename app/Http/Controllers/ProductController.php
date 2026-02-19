@@ -40,7 +40,7 @@ class ProductController extends Controller implements HasMiddleware
             'is_tax_included' => 'required|boolean',
             'category_id'     => 'required|exists:categories,id_category',
             'subcategory_id'  => 'required|exists:subcategories,id_subcategory',
-            'stock'           => 'nullable|integer|min:0' // Permitir stock inicial
+            'stock'           => 'nullable|integer|min:0' 
         ]);
 
         $tax = DB::table('tax_settings')->where('id_tax', $validated['tax_id'])->first();
@@ -54,7 +54,6 @@ class ProductController extends Controller implements HasMiddleware
             $validated['price_sell'] = $validated['price_net'] * (1 + $rate);
         }
 
-        // Si no envían stock, por defecto es 0
         $validated['stock'] = $request->input('stock', 0);
         $validated['created_by'] = Auth::id();
 

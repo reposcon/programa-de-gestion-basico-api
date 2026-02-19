@@ -13,7 +13,7 @@ class CustomerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_customers', only: ['index ' , 'show']),
+            new Middleware('permission:view_customers', only: ['index ', 'show']),
             new Middleware('permission:create_customers', only: ['store']),
             new Middleware('permission:update_customers', only: ['update', 'toggle']),
         ];
@@ -60,13 +60,19 @@ class CustomerController extends Controller implements HasMiddleware
 
     public function toggle($id)
     {
-        $customer = Customer::findOrFail($id);
-        $customer->state_customer = !$customer->state_customer;
-        $customer->save();
+        try {
+            $customer = Customer::findOrFail($id);
+            $customer->state_customer = $customer->state_customer == 1 ? 0 : 1;
+            $customer->save();
 
-        return response()->json([
-            'message' => 'Estado actualizado',
-            'state' => $customer->state_customer
-        ]);
+            $statusText = $customer->state_customer == 1 ? 'activado' : 'desactivado';
+
+            return response()->json([
+                'message' => "El cliente ha sido {$statusText} correctamente.",
+                'state' => $customer->state_customer
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el estado'], 500);
+        }
     }
 }
