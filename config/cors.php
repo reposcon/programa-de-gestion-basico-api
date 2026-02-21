@@ -10,3 +10,5 @@ return [
     'max_age' => 0,
     'supports_credentials' => true,
 ];
+
+// configuracion de rutas para conectar con el front
