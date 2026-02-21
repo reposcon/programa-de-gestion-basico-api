@@ -11,4 +11,6 @@ return [
     'supports_credentials' => true,
 ];
 
+
+
 // configuracion de rutas para conectar con el front
