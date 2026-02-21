@@ -11,17 +11,20 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
-        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+->withMiddleware(function (Middleware $middleware) {
+        $middleware->statefulApi();
+
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 
         $middleware->alias([
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
         ]);
-        
+
         $middleware->validateCsrfTokens(except: [
             'api/*',
         ]);
     })
+
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })
